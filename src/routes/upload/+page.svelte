@@ -8,7 +8,7 @@
 	/** @type {import('./$types').ActionData} */
 	export let form;
 
-	function getName(fullName) {
+	let getName = (fullName) => {
 		const [head, ...tail] = fullName.split('.');
 		let mime = tail[tail.length - 1];
 		let name = head;
@@ -16,7 +16,7 @@
 			name = name + tail.slice(0, -1).join('_');
 		}
 		return { name, mime };
-	}
+	};
 	function getSize(bite) {
 		let toSize = Number(bite) / 1024;
 		let postfix = ' KB';
@@ -28,14 +28,14 @@
 		return Number(Math.ceil(toSize).toFixed(2)) + postfix;
 	}
 
-	function getBase64(evt) {
+	const getBase64 = (evt) => {
 		const files = evt.target.files;
 		for (const file in files) {
 			if (file !== 'length' && file !== 'item') {
 				const reader = new FileReader();
 				reader.readAsDataURL(files[file]);
-				reader.onload = (e) => {
-					db.set(files[file].name, {
+				reader.onloadend = (e) => {
+					db = db.set(files[file].name, {
 						size: getSize(files[file].size),
 						name: getName(files[file].name).name,
 						mime: getName(files[file].name).mime,
@@ -44,7 +44,15 @@
 				};
 			}
 		}
-	}
+	};
+
+	const removeFile = async (event, key) => {
+		event.preventDefault();
+		if (db.has(key)) {
+			await db.delete(key);
+			db = db;
+		}
+	};
 </script>
 
 <h1 class="text-3xl font-bold underline">Upload</h1>
@@ -58,10 +66,25 @@
 		ارسال فایل
 		<input type="file" multiple name="files" on:change={(events) => getBase64(events)} />
 	</label>
-	<input type="submit" title="ارسال" />
+	<input type="submit" value="آپلود" />
 </form>
 <hr />
 
-<ul class="container bg-slate-400">
-	<li>{[...db]}</li>
-</ul>
+<table class="table">
+	<thead>
+		<tr>
+			<th>نام</th>
+			<th>سایز</th>
+			<th>حذف</th>
+		</tr>
+	</thead>
+	<tbody>
+		{#each [...db] as [key, value] (key)}
+			<tr {key}>
+				<td>{value.name}</td>
+				<td>{value.size}</td>
+				<td><button on:click={(event) => removeFile(event, key)}>حذف</button></td>
+			</tr>
+		{/each}
+	</tbody>
+</table>
